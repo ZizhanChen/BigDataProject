@@ -2,9 +2,9 @@ from mrjob.job import MRJob
 import os
 import numpy as np
 
-root_dir = "D:/Documents/bigdata-course/project/BigDataProject/code/data"
+root_dir = "/home/kenny/Course/BigData/project/BigDataProject/code/kmeans_data"
 alpha = 0.5
-beta = 0.5
+beta = 0.9
 
 def split_line(line):
     id, labels, mean_rgb, mean_audio, cluster = line.split("\t")
@@ -66,9 +66,9 @@ def get_k_nearest(target, k=10):
     smallest_key = ''
     t_id, t_labels, t_mean_rgb, t_mean_audio, t_cluster = split_line(target)
 
-    files = os.listdir(os.path.join(root_dir, 'cluster0'))#t_cluster))
+    files = os.listdir(os.path.join(root_dir, t_cluster))
     for file in files:
-        f = open(os.path.join(root_dir, 'cluster0', file), "r")
+        f = open(os.path.join(root_dir, t_cluster, file), "r")
         batch = f.readlines()
         for line in batch:
             id, labels, mean_rgb, mean_audio, cluster = split_line(line)
