@@ -6,6 +6,24 @@ root_dir = "D:/Documents/bigdata-course/project/BigDataProject/code/data"
 alpha = 0.5
 beta = 0.5
 
+def split_line(line):
+    id, labels, mean_rgb, mean_audio, cluster = line.split("\t")
+    id = id.strip()
+    # print(str.encode(id))
+
+    labels = labels.strip(']').strip('[').split(',')
+    labels = [int(i.strip()) for i in labels]
+
+    mean_rgb = mean_rgb.strip(']').strip('[').split(',')
+    mean_rgb = [float(i.strip()) for i in mean_rgb]
+
+    mean_audio = mean_audio.strip(']').strip('[').split(',')
+    mean_audio = [float(i.strip()) for i in mean_audio]
+
+    cluster = cluster.strip()
+
+    return id, labels, mean_rgb, mean_audio, cluster
+
 
 # the structure of target:
 # [id:'abcd', labels:[1,2,3,4], mean_rgb:[1024 float], mean_audio:[128 float]]
@@ -17,23 +35,9 @@ def get_target(target_id):
             f = open(os.path.join(root_dir, cluster, file), "r")
             batch = f.readlines()
             for line in batch:
-                id, labels, mean_rgb, mean_audio, cluster = line.split("\t")
-                id = id.strip()
-                #print(str.encode(id))
-
-                labels = labels.strip(']').strip('[').split(',')
-                labels = [int(i.strip()) for i in labels]
-
-                mean_rgb = mean_rgb.strip(']').strip('[').split(',')
-                mean_rgb = [float(i.strip()) for i in mean_rgb]
-
-                mean_audio = mean_audio.strip(']').strip('[').split(',')
-                mean_audio = [float(i.strip()) for i in mean_audio]
-
-                cluster = cluster.strip()
-
+                id, labels, mean_rgb, mean_audio, cluster = split_line(line)
                 if id == target_id:
-                    return [id, labels, mean_rgb, mean_audio, cluster]
+                    return line
 
 
 def jaccard_similarity(a, b):
@@ -57,26 +61,17 @@ def similarity(t_labels, t_mean_rgb, t_mean_audio, labels, mean_rgb, mean_audio)
     return alpha * jaccard_sim + (1 - alpha) * (beta * cosine_sim_1 + (1-beta) * cosine_sim_2)
 
 
-def get_k_nearest(target_id, k=10):
+def get_k_nearest(target, k=10):
     dictionary = dict()
     smallest_key = ''
-    t_id, t_labels, t_mean_rgb, t_mean_audio, t_cluster = get_target(target_id)
+    t_id, t_labels, t_mean_rgb, t_mean_audio, t_cluster = split_line(target)
+
     files = os.listdir(os.path.join(root_dir, 'cluster0'))#t_cluster))
     for file in files:
         f = open(os.path.join(root_dir, 'cluster0', file), "r")
         batch = f.readlines()
         for line in batch:
-            id, labels, mean_rgb, mean_audio, cluster = line.split("\t")
-
-            labels = labels.strip(']').strip('[').split(',')
-            labels = [int(i.strip()) for i in labels]
-
-            mean_rgb = mean_rgb.strip(']').strip('[').split(',')
-            mean_rgb = [float(i.strip()) for i in mean_rgb]
-
-            mean_audio = mean_audio.strip(']').strip('[').split(',')
-            mean_audio = [float(i.strip()) for i in mean_audio]
-
+            id, labels, mean_rgb, mean_audio, cluster = split_line(line)
             sim = similarity(t_labels, t_mean_rgb, t_mean_audio, labels, mean_rgb, mean_audio)
             if len(dictionary) <= k:
                 dictionary[id] = sim
@@ -92,10 +87,11 @@ def get_k_nearest(target_id, k=10):
 class MRRecommend(MRJob):
     def mapper(self, _, line):
         for target_id in line.split():
-            yield (target_id, _)
+            target = get_target(target_id)
+            yield (target, _)
 
-    def reducer(self, target_id, _):
-        nearests, sims = get_k_nearest(target_id)
+    def reducer(self, target, _):
+        nearests, sims = get_k_nearest(target)
         yield (nearests, sims)
 
 
